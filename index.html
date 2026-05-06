@@ -1115,25 +1115,46 @@ function getActiveCase() {
   return getCase(state.activeCaseId);
 }
 
-function save() {
-  try { localStorage.setItem('dtu_cid_v3', JSON.stringify(state)); } catch(e) {}
+// Zmień funkcję save na asynchroniczną (async)
+async function save() {
+  try { 
+    localStorage.setItem('dtu_cid_v3', JSON.stringify(state)); 
+    // Dodajemy zapis do chmury
+    if (window.saveToSupabase) {
+        await window.saveToSupabase(state);
+    }
+  } catch(e) { console.error(e); }
 }
-
-function load() {
+// Zmień funkcję load na asynchroniczną (async)
+async function load() {
   try {
+    // 1. Spróbuj pobrać z chmury
+    if (window.loadFromSupabase) {
+        const cloudData = await window.loadFromSupabase();
+        if (cloudData) {
+            state = cloudData;
+            console.log("Załadowano dane z chmury");
+            return; // Kończymy, dane pobrane
+        }
+    }
+    
+    // 2. Jeśli nie ma w chmurze, ładuj z lokalnej pamięci
     const d = localStorage.getItem('dtu_cid_v3');
     if (d) state = JSON.parse(d);
-  } catch(e) {}
+  } catch(e) { console.error(e); }
 }
 
 // ============================================================
 // INIT
 // ============================================================
-load();
-renderSidebar();
-if (state.activeCaseId && getActiveCase()) {
-  openCase(state.activeCaseId);
-}
+// Zastąp stare wywołania load() tym poniżej:
+(async () => {
+    await load();
+    renderSidebar();
+    if (state.activeCaseId && getActiveCase()) {
+      openCase(state.activeCaseId);
+    }
+})();
 
 // ============================================================
 // SIDEBAR
@@ -1780,23 +1801,24 @@ window.addEventListener('resize', renderConnections);
 
 </script>
 <script>
-  // 1. Zmieniamy nazwę zmiennej na 'mySupabase', aby nie było konfliktu
   const sbUrl = 'https://xoresadfslfazkuuxydb.supabase.co'; 
-  const sbKey = 'sb_publishable_KpRCFziobdeJrVXauxTauQ_lWwGVOgF'; // Wklej swój klucz tutaj
+  const sbKey = 'sb_publishable_KpRCFziobdeJrVXauxTauQ_lWwGVOgF';
   const mySupabase = supabase.createClient(sbUrl, sbKey);
 
-  console.log("Połączenie z Supabase (mySupabase) gotowe!");
-
-  // 2. Dodajemy funkcje do "window", żeby były dostępne w konsoli (i wszędzie indziej)
-  window.saveToSupabase = async function(boardData) {
-      const { data, error } = await mySupabase
+  // Funkcja wysyłająca dane do chmury
+  window.saveToSupabase = async function(dataToSave) {
+      const { error } = await mySupabase
           .from('investigation_state')
-          .upsert({ id: 1, data: boardData, updated_at: new Date() });
+          .upsert({ id: 1, data: dataToSave, updated_at: new Date() });
       
-      if (error) console.error("Błąd zapisu:", error);
-      else console.log("Sukces! Dane wysłane do chmury.");
-  }
+      if (error) {
+          console.error("Błąd zapisu w Supabase:", error);
+      } else {
+          console.log("Dane zsynchronizowane z chmurą.");
+      }
+  };
 
+  // Funkcja pobierająca dane z chmury
   window.loadFromSupabase = async function() {
       const { data, error } = await mySupabase
           .from('investigation_state')
@@ -1804,12 +1826,8 @@ window.addEventListener('resize', renderConnections);
           .eq('id', 1)
           .single();
       
-      if (data) {
-          console.log("Pobrano z bazy:", data.data);
-          // Tutaj wywołaj swoją funkcję do rysowania tablicy, np:
-          // updateCorkboard(data.data);
-      }
-  }
+      return data ? data.data : null;
+  };
 </script>
 </body>
 </html>
