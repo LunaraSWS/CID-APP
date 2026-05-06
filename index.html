@@ -1,0 +1,1792 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sheriff DTU — Criminal Investigation Division</title>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:wght@400;700&family=Oswald:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-dark: #1a1008;
+  --bg-panel: #0f0a04;
+  --bg-card: #2a1f10;
+  --bg-cork: #4a3420;
+  --cork-texture: #5a4030;
+  --gold: #c9a84c;
+  --gold-light: #e8c56e;
+  --red-tape: #8b1a1a;
+  --red-bright: #cc2222;
+  --green-ok: #2a7a2a;
+  --green-bright: #44bb44;
+  --text-main: #e8dcc8;
+  --text-muted: #8a7a60;
+  --text-dark: #3a2a1a;
+  --border-gold: #6a5020;
+  --suspect-bg: #5a1010;
+  --suspect-border: #cc3333;
+  --related-bg: #0a3a5a;
+  --related-border: #3399cc;
+  --witness-bg: #1a4a1a;
+  --witness-border: #44cc44;
+  --unknown-bg: #3a3020;
+  --unknown-border: #888866;
+  --note-bg: #e8d8a0;
+  --note-text: #2a1a08;
+  --evidence-bg: #d8c890;
+  --shadow: rgba(0,0,0,0.7);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Courier Prime', monospace;
+  background: var(--bg-dark);
+  color: var(--text-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ===== TOP BAR ===== */
+#topbar {
+  background: var(--bg-panel);
+  border-bottom: 2px solid var(--gold);
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  height: 56px;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.8);
+}
+
+.badge-shield {
+  font-size: 22px;
+  color: var(--gold);
+}
+
+#agency-name {
+  font-family: 'Oswald', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  color: var(--gold);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+#agency-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  white-space: nowrap;
+}
+
+.topbar-sep {
+  width: 1px;
+  height: 30px;
+  background: var(--border-gold);
+}
+
+#current-case-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+#case-number-display {
+  font-family: 'Oswald', sans-serif;
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+}
+
+#case-title-display {
+  font-family: 'Special Elite', cursive;
+  font-size: 16px;
+  color: var(--gold-light);
+}
+
+.top-btn {
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-gold);
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.top-btn:hover {
+  color: var(--gold);
+  border-color: var(--gold);
+  background: rgba(201,168,76,0.1);
+}
+
+.top-btn.danger:hover {
+  color: var(--red-bright);
+  border-color: var(--red-bright);
+  background: rgba(204,34,34,0.1);
+}
+
+.top-btn.primary {
+  background: var(--gold);
+  color: var(--bg-dark);
+  border-color: var(--gold);
+  font-weight: 700;
+}
+
+.top-btn.primary:hover {
+  background: var(--gold-light);
+}
+
+/* ===== SIDEBAR ===== */
+#sidebar {
+  position: fixed;
+  left: 0; top: 56px; bottom: 0;
+  width: 240px;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-gold);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#sidebar-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-gold);
+}
+
+#sidebar-header h3 {
+  font-family: 'Oswald', sans-serif;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+#new-case-btn {
+  width: 100%;
+  font-family: 'Courier Prime', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: var(--gold);
+  color: var(--bg-dark);
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#new-case-btn:hover { background: var(--gold-light); }
+
+#cases-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+}
+
+#cases-list::-webkit-scrollbar { width: 4px; }
+#cases-list::-webkit-scrollbar-track { background: transparent; }
+#cases-list::-webkit-scrollbar-thumb { background: var(--border-gold); }
+
+.case-item {
+  padding: 10px 1rem;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+  border-bottom: 1px solid rgba(100,80,32,0.2);
+}
+
+.case-item:hover {
+  background: rgba(201,168,76,0.05);
+  border-left-color: var(--border-gold);
+}
+
+.case-item.active {
+  background: rgba(201,168,76,0.1);
+  border-left-color: var(--gold);
+}
+
+.case-item-num {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.case-item-title {
+  font-family: 'Special Elite', cursive;
+  font-size: 13px;
+  color: var(--text-main);
+  margin: 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.case-item-status {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.status-open { background: rgba(139,26,26,0.4); color: #ff8888; border: 1px solid var(--red-tape); }
+.status-active { background: rgba(42,122,42,0.4); color: #88ff88; border: 1px solid var(--green-ok); }
+.status-closed { background: rgba(50,50,50,0.4); color: #888; border: 1px solid #444; }
+.status-cold { background: rgba(26,60,100,0.4); color: #88aaff; border: 1px solid #336; }
+
+/* ===== MAIN CORKBOARD ===== */
+#main {
+  margin-left: 240px;
+  margin-top: 56px;
+  min-height: calc(100vh - 56px);
+  position: relative;
+}
+
+/* ===== TOOLBAR ===== */
+#toolbar {
+  position: sticky;
+  top: 56px;
+  z-index: 40;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-gold);
+  padding: 6px 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#toolbar label {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-right: 4px;
+}
+
+/* ===== CORKBOARD ===== */
+#corkboard {
+  background-color: var(--bg-cork);
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.01) 2px,
+      rgba(255,255,255,0.01) 4px
+    );
+  min-height: calc(100vh - 110px);
+  position: relative;
+  overflow: hidden;
+}
+
+#corkboard-inner {
+  position: relative;
+  width: 100%;
+  min-height: calc(100vh - 110px);
+}
+
+/* ===== SVG CONNECTIONS ===== */
+#connections-svg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ===== CARDS ===== */
+.card {
+  position: absolute;
+  z-index: 10;
+  cursor: grab;
+  user-select: none;
+  filter: drop-shadow(3px 4px 8px rgba(0,0,0,0.7));
+  transition: filter 0.15s, z-index 0s;
+}
+
+.card:active { cursor: grabbing; z-index: 50; }
+.card.selected { z-index: 30; filter: drop-shadow(0 0 12px rgba(201,168,76,0.6)) drop-shadow(3px 4px 8px rgba(0,0,0,0.7)); }
+
+/* Person card */
+.card-person {
+  width: 160px;
+}
+
+.card-person .card-inner {
+  background: var(--bg-card);
+  border: 2px solid var(--border-gold);
+  padding: 0;
+  overflow: hidden;
+}
+
+.card-photo {
+  width: 100%;
+  height: 130px;
+  background: #1a1008;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  border-bottom: 1px solid var(--border-gold);
+}
+
+.card-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-photo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.card-photo-placeholder span { font-size: 28px; }
+
+.card-photo input[type=file] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.card-body {
+  padding: 8px 10px;
+}
+
+.card-name {
+  font-family: 'Special Elite', cursive;
+  font-size: 14px;
+  color: var(--text-main);
+  margin-bottom: 2px;
+  word-break: break-word;
+}
+
+.card-role {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.card-status-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border: 1px solid;
+}
+
+.badge-suspect { background: rgba(139,26,26,0.6); color: #ff9999; border-color: #cc4444; }
+.badge-related { background: rgba(26,60,100,0.6); color: #99ccff; border-color: #4488cc; }
+.badge-witness { background: rgba(30,80,30,0.6); color: #99ff99; border-color: #44aa44; }
+.badge-victim { background: rgba(80,40,0,0.6); color: #ffcc88; border-color: #cc8844; }
+.badge-unknown { background: rgba(50,50,40,0.6); color: #ccccaa; border-color: #888866; }
+.badge-cleared { background: rgba(20,20,20,0.6); color: #888; border-color: #555; }
+.badge-collaborator { background: rgba(0,60,60,0.6); color: #88ffee; border-color: #44aaaa; }
+
+/* Note card */
+.card-note {
+  width: 200px;
+}
+
+.card-note .card-inner {
+  background: var(--note-bg);
+  padding: 10px 12px;
+  position: relative;
+}
+
+.card-note.evidence .card-inner {
+  background: var(--evidence-bg);
+}
+
+.pin {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ff4444, #991111);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  z-index: 5;
+}
+
+.pin.gold { background: radial-gradient(circle at 35% 35%, var(--gold-light), #8a6010); }
+.pin.blue { background: radial-gradient(circle at 35% 35%, #44aaff, #114488); }
+.pin.green { background: radial-gradient(circle at 35% 35%, #44ff44, #118811); }
+
+.note-date {
+  font-size: 9px;
+  color: #7a6040;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.note-title {
+  font-family: 'Special Elite', cursive;
+  font-size: 13px;
+  color: var(--note-text);
+  font-weight: bold;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+
+.note-body {
+  font-size: 11px;
+  color: #4a3520;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.evidence-label {
+  font-size: 8px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #8a6040;
+  border-top: 1px solid #c8b080;
+  padding-top: 6px;
+  margin-top: 8px;
+}
+
+.evidence-ref {
+  font-size: 10px;
+  color: #6a4820;
+  font-weight: 700;
+}
+
+.verified-stamp {
+  font-family: 'Oswald', sans-serif;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--green-bright);
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+/* Card controls (shown on hover) */
+.card-controls {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 30;
+  pointer-events: all;
+}
+
+.card:hover .card-controls { opacity: 1; }
+
+.card-ctrl-btn {
+  font-size: 9px;
+  font-family: 'Courier Prime', monospace;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: rgba(15,10,4,0.92);
+  color: var(--text-muted);
+  border: 1px solid var(--border-gold);
+  padding: 3px 7px;
+  cursor: pointer;
+  transition: all 0.1s;
+  pointer-events: all;
+}
+
+.card-ctrl-btn:hover { color: var(--gold); background: rgba(201,168,76,0.1); }
+.card-ctrl-btn.del:hover { color: var(--red-bright); border-color: var(--red-bright); }
+
+/* Connect mode */
+body.connect-mode .card { cursor: crosshair; }
+body.connect-mode .card:hover .card-inner { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* ===== EMPTY STATE ===== */
+#empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  height: calc(100vh - 120px);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+#empty-state h2 {
+  font-family: 'Special Elite', cursive;
+  font-size: 28px;
+  color: var(--border-gold);
+}
+
+#empty-state p {
+  font-size: 13px;
+  max-width: 400px;
+  line-height: 1.6;
+}
+
+/* ===== MODALS ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal {
+  background: var(--bg-panel);
+  border: 1px solid var(--gold);
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.9);
+}
+
+.modal h2 {
+  font-family: 'Oswald', sans-serif;
+  font-size: 16px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-gold);
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-gold);
+  color: var(--text-main);
+  font-family: 'Courier Prime', monospace;
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  border-color: var(--gold);
+}
+
+.form-group textarea { min-height: 80px; resize: vertical; }
+
+.form-group select option { background: var(--bg-panel); color: var(--text-main); }
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-gold);
+}
+
+.btn-cancel {
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-gold);
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.btn-cancel:hover { color: var(--text-main); }
+
+.btn-confirm {
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: var(--gold);
+  color: var(--bg-dark);
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.btn-confirm:hover { background: var(--gold-light); }
+
+/* ===== CONNECT MODE BANNER ===== */
+#connect-banner {
+  display: none;
+  position: fixed;
+  top: 56px;
+  left: 240px;
+  right: 0;
+  background: rgba(139,26,26,0.9);
+  border-bottom: 2px solid var(--red-bright);
+  padding: 8px 1rem;
+  z-index: 90;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #ffaaaa;
+  text-align: center;
+}
+
+body.connect-mode #connect-banner { display: block; }
+
+/* ===== CONNECTION LINE LABELS ===== */
+.conn-label {
+  font-size: 9px;
+  font-family: 'Courier Prime', monospace;
+  fill: #cc8844;
+  pointer-events: none;
+}
+
+/* ===== CASE DETAIL PANEL ===== */
+#case-meta {
+  position: fixed;
+  right: 0;
+  top: 56px;
+  bottom: 0;
+  width: 280px;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border-gold);
+  z-index: 45;
+  transform: translateX(100%);
+  transition: transform 0.2s;
+  overflow-y: auto;
+  padding: 1rem;
+  display: none;
+}
+
+#case-meta.open {
+  transform: translateX(0);
+  display: block;
+}
+
+#case-meta h3 {
+  font-family: 'Oswald', sans-serif;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+/* ===== PHOTO UPLOAD IN CARDS ===== */
+.photo-upload-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.photo-upload-wrap input[type=file] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 0;
+}
+
+/* ===== SCROLLBARS ===== */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-gold); }
+
+/* ===== EDIT CARD MODAL - inline ===== */
+.inline-edit input, .inline-edit textarea, .inline-edit select {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border-gold);
+  color: var(--text-main);
+  font-family: 'Courier Prime', monospace;
+  font-size: 12px;
+  padding: 5px 8px;
+  width: 100%;
+  margin-bottom: 6px;
+  outline: none;
+}
+
+/* Header strip on person card */
+.card-header-strip {
+  height: 4px;
+  width: 100%;
+}
+.strip-suspect { background: var(--red-bright); }
+.strip-related { background: #3399cc; }
+.strip-witness { background: var(--green-bright); }
+.strip-victim { background: #cc8844; }
+.strip-unknown { background: #888866; }
+.strip-cleared { background: #555; }
+.strip-collaborator { background: #44aaaa; }
+
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div style="display:flex;flex-direction:column;line-height:1.2">
+    <div id="agency-name">⭐ Sheriff DTU &nbsp;·&nbsp; CID</div>
+    <div id="agency-sub">Criminal Investigation Division</div>
+  </div>
+  <div class="topbar-sep"></div>
+
+  <div id="current-case-info">
+    <span id="case-number-display">—</span>
+    <span id="case-title-display">No case selected</span>
+  </div>
+
+  <button class="top-btn" onclick="showAddPerson()" id="btn-add-person" disabled>+ Person</button>
+  <button class="top-btn" onclick="showAddNote()" id="btn-add-note" disabled>+ Note</button>
+  <button class="top-btn" onclick="showAddEvidence()" id="btn-add-evidence" disabled>+ Evidence</button>
+  <div class="topbar-sep"></div>
+  <button class="top-btn" id="btn-connect" onclick="toggleConnectMode()" disabled>Connect</button>
+  <button class="top-btn danger" id="btn-del-conn" onclick="deleteSelectedConnection()" style="display:none">— Remove Link</button>
+  <div class="topbar-sep"></div>
+  <button class="top-btn" onclick="openCaseMeta()" id="btn-case-meta" disabled>Case Info</button>
+  <button class="top-btn danger" onclick="clearCorkboard()" id="btn-clear" disabled>Clear Board</button>
+</div>
+
+<!-- CONNECT MODE BANNER -->
+<div id="connect-banner">
+  ⚠ CONNECTION MODE — Click two cards to link them, then press ESC or click Connect again to exit
+</div>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h3>Active Cases</h3>
+    <button id="new-case-btn" onclick="showNewCase()">+ New Case</button>
+  </div>
+  <div id="cases-list"></div>
+</div>
+
+<!-- MAIN CORKBOARD AREA -->
+<div id="main">
+  <div id="toolbar">
+    <label>View:</label>
+    <button class="top-btn" onclick="zoomIn()">Zoom +</button>
+    <button class="top-btn" onclick="zoomOut()">Zoom −</button>
+    <button class="top-btn" onclick="resetZoom()">Reset</button>
+    <div class="topbar-sep" style="height:20px"></div>
+    <label>Filter:</label>
+    <button class="top-btn" onclick="filterCards('all')">All</button>
+    <button class="top-btn" onclick="filterCards('person')">Persons</button>
+    <button class="top-btn" onclick="filterCards('note')">Notes</button>
+    <button class="top-btn" onclick="filterCards('evidence')">Evidence</button>
+  </div>
+
+  <div id="corkboard">
+    <svg id="connections-svg"></svg>
+    <div id="corkboard-inner">
+      <div id="empty-state">
+        <h2>Case Board Empty</h2>
+        <p>Select a case from the sidebar or create a new one.<br>Then add persons, notes, and evidence to build your investigation.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CASE META PANEL -->
+<div id="case-meta">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+    <h3>Case Details</h3>
+    <button class="top-btn" onclick="closeCaseMeta()">✕</button>
+  </div>
+  <div id="case-meta-content"></div>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- New Case Modal -->
+<div class="modal-overlay" id="modal-new-case" style="display:none">
+  <div class="modal">
+    <h2>New Case</h2>
+    <div class="form-group">
+      <label>Case Number</label>
+      <input type="text" id="nc-number" placeholder="e.g. 2024-001">
+    </div>
+    <div class="form-group">
+      <label>Case Title / Operation Name</label>
+      <input type="text" id="nc-title" placeholder="e.g. Operation Orka">
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="nc-status">
+        <option value="open">Open</option>
+        <option value="active">Active</option>
+        <option value="cold">Cold</option>
+        <option value="closed">Closed</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Lead Officer</label>
+      <input type="text" id="nc-officer" placeholder="Name / badge number">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="nc-desc" placeholder="Brief case summary..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-new-case')">Cancel</button>
+      <button class="btn-confirm" onclick="createCase()">Create Case</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Person Modal -->
+<div class="modal-overlay" id="modal-add-person" style="display:none">
+  <div class="modal">
+    <h2>Add Person</h2>
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" id="ap-name" placeholder="Full name">
+    </div>
+    <div class="form-group">
+      <label>Role / Title</label>
+      <input type="text" id="ap-role" placeholder="e.g. LoveCaffe Manager">
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="ap-status">
+        <option value="unknown">Unknown</option>
+        <option value="suspect">Suspect</option>
+        <option value="related">Related</option>
+        <option value="witness">Witness</option>
+        <option value="victim">Victim</option>
+        <option value="cleared">Cleared</option>
+        <option value="collaborator">Collaborator</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="ap-notes" placeholder="Additional details..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-add-person')">Cancel</button>
+      <button class="btn-confirm" onclick="addPerson()">Add to Board</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Note Modal -->
+<div class="modal-overlay" id="modal-add-note" style="display:none">
+  <div class="modal">
+    <h2>Add Note</h2>
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" id="an-title" placeholder="Note title">
+    </div>
+    <div class="form-group">
+      <label>Content</label>
+      <textarea id="an-body" placeholder="Write your observation..." style="min-height:120px"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Pin Color</label>
+      <select id="an-pin">
+        <option value="red">Red</option>
+        <option value="gold">Gold</option>
+        <option value="blue">Blue</option>
+        <option value="green">Green</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Verified?</label>
+      <select id="an-verified">
+        <option value="no">Unverified</option>
+        <option value="yes">Verified</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-add-note')">Cancel</button>
+      <button class="btn-confirm" onclick="addNote()">Add to Board</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Evidence Modal -->
+<div class="modal-overlay" id="modal-add-evidence" style="display:none">
+  <div class="modal">
+    <h2>Add Evidence</h2>
+    <div class="form-group">
+      <label>Evidence Title</label>
+      <input type="text" id="ae-title" placeholder="e.g. Phone Number, Photo, Recording">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="ae-body" placeholder="Evidence details..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Reference Number</label>
+      <input type="text" id="ae-ref" placeholder="e.g. EV-0013">
+    </div>
+    <div class="form-group">
+      <label>Verified?</label>
+      <select id="ae-verified">
+        <option value="no">Unverified</option>
+        <option value="yes">Verified</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-add-evidence')">Cancel</button>
+      <button class="btn-confirm" onclick="addEvidence()">Add to Board</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Person Modal -->
+<div class="modal-overlay" id="modal-edit-person" style="display:none">
+  <div class="modal">
+    <h2>Edit Person</h2>
+    <input type="hidden" id="ep-id">
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" id="ep-name">
+    </div>
+    <div class="form-group">
+      <label>Role / Title</label>
+      <input type="text" id="ep-role">
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="ep-status">
+        <option value="unknown">Unknown</option>
+        <option value="suspect">Suspect</option>
+        <option value="related">Related</option>
+        <option value="witness">Witness</option>
+        <option value="victim">Victim</option>
+        <option value="cleared">Cleared</option>
+        <option value="collaborator">Collaborator</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="ep-notes"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-edit-person')">Cancel</button>
+      <button class="btn-confirm" onclick="saveEditPerson()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Note/Evidence Modal -->
+<div class="modal-overlay" id="modal-edit-note" style="display:none">
+  <div class="modal">
+    <h2 id="edit-note-heading">Edit Note</h2>
+    <input type="hidden" id="en-id">
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" id="en-title">
+    </div>
+    <div class="form-group">
+      <label>Content</label>
+      <textarea id="en-body" style="min-height:100px"></textarea>
+    </div>
+    <div id="en-ref-group" class="form-group" style="display:none">
+      <label>Reference Number</label>
+      <input type="text" id="en-ref">
+    </div>
+    <div class="form-group">
+      <label>Verified?</label>
+      <select id="en-verified">
+        <option value="no">Unverified</option>
+        <option value="yes">Verified</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-edit-note')">Cancel</button>
+      <button class="btn-confirm" onclick="saveEditNote()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Connection Label Modal -->
+<div class="modal-overlay" id="modal-conn-label" style="display:none">
+  <div class="modal" style="max-width:340px">
+    <h2>Connection Label</h2>
+    <div class="form-group">
+      <label>Label (optional)</label>
+      <input type="text" id="conn-label-input" placeholder="e.g. related, alibi, contact">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cancelConnection()">Cancel</button>
+      <button class="btn-confirm" onclick="confirmConnection()">Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="modal-confirm" style="display:none">
+  <div class="modal" style="max-width:360px">
+    <h2>Confirm</h2>
+    <p id="confirm-message" style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:0.5rem"></p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-confirm')">Cancel</button>
+      <button class="btn-confirm del" id="confirm-ok-btn" style="background:var(--red-bright);border-color:var(--red-bright)">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let state = {
+  cases: [],
+  activeCaseId: null,
+  zoom: 1
+};
+
+let connectMode = false;
+let connectFirst = null;
+let selectedConn = null;
+let zoom = 1;
+
+function getCase(id) {
+  return state.cases.find(c => c.id === id);
+}
+
+function getActiveCase() {
+  return getCase(state.activeCaseId);
+}
+
+function save() {
+  try { localStorage.setItem('dtu_cid_v3', JSON.stringify(state)); } catch(e) {}
+}
+
+function load() {
+  try {
+    const d = localStorage.getItem('dtu_cid_v3');
+    if (d) state = JSON.parse(d);
+  } catch(e) {}
+}
+
+// ============================================================
+// INIT
+// ============================================================
+load();
+renderSidebar();
+if (state.activeCaseId && getActiveCase()) {
+  openCase(state.activeCaseId);
+}
+
+// ============================================================
+// SIDEBAR
+// ============================================================
+function renderSidebar() {
+  const list = document.getElementById('cases-list');
+  if (!state.cases.length) {
+    list.innerHTML = '<div style="padding:1rem;font-size:11px;color:var(--text-muted);text-align:center">No cases yet.<br>Create one to begin.</div>';
+    return;
+  }
+  list.innerHTML = state.cases.map(c => `
+    <div class="case-item ${c.id === state.activeCaseId ? 'active' : ''}" onclick="openCase('${c.id}')">
+      <div class="case-item-num">Case #${c.number}</div>
+      <div class="case-item-title">${esc(c.title)}</div>
+      <span class="case-item-status status-${c.status}">${c.status}</span>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// CASE MANAGEMENT
+// ============================================================
+function showNewCase() {
+  openModal('modal-new-case');
+  document.getElementById('nc-number').value = `2024-${String(state.cases.length+1).padStart(3,'0')}`;
+  document.getElementById('nc-title').value = '';
+  document.getElementById('nc-officer').value = '';
+  document.getElementById('nc-desc').value = '';
+  document.getElementById('nc-status').value = 'open';
+}
+
+function createCase() {
+  const num = document.getElementById('nc-number').value.trim();
+  const title = document.getElementById('nc-title').value.trim();
+  if (!title) { alert('Case title required'); return; }
+  const c = {
+    id: uid(),
+    number: num || `2024-${state.cases.length+1}`,
+    title,
+    status: document.getElementById('nc-status').value,
+    officer: document.getElementById('nc-officer').value.trim(),
+    desc: document.getElementById('nc-desc').value.trim(),
+    cards: [],
+    connections: [],
+    created: new Date().toLocaleDateString('pl-PL')
+  };
+  state.cases.unshift(c);
+  save();
+  closeModal('modal-new-case');
+  openCase(c.id);
+}
+
+function openCase(id) {
+  state.activeCaseId = id;
+  save();
+  renderSidebar();
+  renderBoard();
+  const c = getActiveCase();
+  document.getElementById('case-number-display').textContent = `Case #${c.number}`;
+  document.getElementById('case-title-display').textContent = c.title;
+  enableButtons(true);
+}
+
+function enableButtons(on) {
+  ['btn-add-person','btn-add-note','btn-add-evidence','btn-connect','btn-case-meta','btn-clear']
+    .forEach(id => document.getElementById(id).disabled = !on);
+}
+
+function clearCorkboard() {
+  showConfirm('Clear all cards from this board? This cannot be undone.', () => {
+    const c = getActiveCase();
+    c.cards = [];
+    c.connections = [];
+    save();
+    renderBoard();
+  });
+}
+
+// ============================================================
+// BOARD RENDERING
+// ============================================================
+
+function renderBoard() {
+  const c = getActiveCase();
+  const inner = document.getElementById('corkboard-inner');
+  const svg = document.getElementById('connections-svg');
+  const empty = document.getElementById('empty-state');
+
+  if (!c || !c.cards.length) {
+    inner.innerHTML = '';
+    inner.appendChild(empty);
+    empty.style.display = 'flex';
+    svg.innerHTML = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+  inner.innerHTML = '';
+  inner.appendChild(empty);
+
+  c.cards.forEach(card => {
+    inner.appendChild(buildCard(card));
+  });
+
+  renderConnections();
+  applyZoom();
+}
+
+function buildCard(card) {
+  const el = document.createElement('div');
+  el.className = `card card-${card.type === 'evidence' ? 'note evidence' : card.type}`;
+  el.id = `card-${card.id}`;
+  el.style.left = card.x + 'px';
+  el.style.top = card.y + 'px';
+  el.dataset.id = card.id;
+
+  if (card.type === 'person') {
+    el.innerHTML = buildPersonCard(card);
+  } else {
+    el.innerHTML = buildNoteCard(card);
+  }
+
+  makeDraggable(el, card);
+
+  el.querySelector('.card-ctrl-btn.edit')?.addEventListener('click', e => {
+    e.stopPropagation();
+    editCard(card.id);
+  });
+  el.querySelector('.card-ctrl-btn.del')?.addEventListener('click', e => {
+    e.stopPropagation();
+    deleteCard(card.id);
+  });
+
+  el.addEventListener('click', e => {
+    if (connectMode) {
+      e.stopPropagation();
+      handleConnectClick(card.id);
+    }
+  });
+
+  // Photo upload
+  const fileInput = el.querySelector('input[type=file]');
+  if (fileInput) {
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        card.photo = ev.target.result;
+        save();
+        renderBoard();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  return el;
+}
+
+function buildPersonCard(card) {
+  const statusLabel = card.status.charAt(0).toUpperCase() + card.status.slice(1);
+  const photoContent = card.photo
+    ? `<img src="${card.photo}" alt="photo">`
+    : `<div class="photo-upload-wrap">
+        <span style="font-size:32px;opacity:0.3">👤</span>
+        <span>Upload Photo</span>
+        <input type="file" accept="image/*" onclick="event.stopPropagation()">
+       </div>`;
+
+  return `
+    <div class="card-header-strip strip-${card.status}"></div>
+    <div class="card-inner">
+      <div class="card-photo">${photoContent}</div>
+      <div class="card-body">
+        <div class="card-name">${esc(card.name)}</div>
+        <div class="card-role">${esc(card.role || '')}</div>
+        <span class="card-status-badge badge-${card.status}">${statusLabel}</span>
+        ${card.notes ? `<div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.4">${esc(card.notes).substring(0,80)}${card.notes.length>80?'…':''}</div>` : ''}
+      </div>
+    </div>
+    <div class="card-controls">
+      <button class="card-ctrl-btn edit">Edit</button>
+      <button class="card-ctrl-btn del">Del</button>
+    </div>
+  `;
+}
+
+function buildNoteCard(card) {
+  const isEvidence = card.type === 'evidence';
+  const pin = card.pin || 'red';
+  return `
+    <div class="pin ${pin}"></div>
+    <div class="card-inner">
+      <div class="note-date">${card.date || ''}</div>
+      <div class="note-title">${esc(card.title)}</div>
+      <div class="note-body">${esc(card.body || '')}</div>
+      ${isEvidence && card.ref ? `<div class="evidence-label">Dowód rzeczowy</div><div class="evidence-ref">${esc(card.ref)}</div>` : ''}
+      ${card.verified === 'yes' ? `<div class="verified-stamp">✓ Zweryfikowane</div>` : ''}
+    </div>
+    <div class="card-controls">
+      <button class="card-ctrl-btn edit">Edit</button>
+      <button class="card-ctrl-btn del">Del</button>
+    </div>
+  `;
+}
+
+// ============================================================
+// CONNECTIONS
+// ============================================================
+function renderConnections() {
+  const c = getActiveCase();
+  if (!c) return;
+  const svg = document.getElementById('connections-svg');
+  const inner = document.getElementById('corkboard-inner');
+  svg.innerHTML = '';
+
+  c.connections.forEach((conn, idx) => {
+    const a = document.getElementById(`card-${conn.from}`);
+    const b = document.getElementById(`card-${conn.to}`);
+    if (!a || !b) return;
+
+    const ar = a.getBoundingClientRect();
+    const br = b.getBoundingClientRect();
+    const pr = inner.getBoundingClientRect();
+
+    const x1 = (ar.left - pr.left) + ar.width/2;
+    const y1 = (ar.top - pr.top) + ar.height/2;
+    const x2 = (br.left - pr.left) + br.width/2;
+    const y2 = (br.top - pr.top) + br.height/2;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+    line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+    line.setAttribute('stroke', conn.id === selectedConn ? '#cc8844' : '#8b1a1a');
+    line.setAttribute('stroke-width', conn.id === selectedConn ? 3 : 2);
+    line.setAttribute('stroke-dasharray', '6,3');
+    line.style.cursor = 'pointer';
+    line.addEventListener('click', () => selectConnection(conn.id));
+    svg.appendChild(line);
+
+    if (conn.label) {
+      const mx = (x1+x2)/2, my = (y1+y2)/2;
+      const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+      text.setAttribute('x', mx); text.setAttribute('y', my-4);
+      text.setAttribute('text-anchor','middle');
+      text.setAttribute('class','conn-label');
+      text.textContent = conn.label;
+      svg.appendChild(text);
+    }
+  });
+}
+
+function selectConnection(id) {
+  selectedConn = id;
+  document.getElementById('btn-del-conn').style.display = selectedConn ? 'inline-block' : 'none';
+  renderConnections();
+}
+
+function deleteSelectedConnection() {
+  if (!selectedConn) return;
+  const c = getActiveCase();
+  c.connections = c.connections.filter(cn => cn.id !== selectedConn);
+  selectedConn = null;
+  document.getElementById('btn-del-conn').style.display = 'none';
+  save();
+  renderConnections();
+}
+
+// ============================================================
+// CONNECT MODE
+// ============================================================
+function toggleConnectMode() {
+  connectMode = !connectMode;
+  connectFirst = null;
+  document.body.classList.toggle('connect-mode', connectMode);
+  const btn = document.getElementById('btn-connect');
+  btn.textContent = connectMode ? 'Cancel Connect' : 'Connect';
+  btn.style.color = connectMode ? 'var(--red-bright)' : '';
+  btn.style.borderColor = connectMode ? 'var(--red-bright)' : '';
+}
+
+let pendingConn = null;
+
+function handleConnectClick(cardId) {
+  if (!connectFirst) {
+    connectFirst = cardId;
+    document.getElementById(`card-${cardId}`).classList.add('selected');
+  } else {
+    if (connectFirst === cardId) { connectFirst = null; document.querySelectorAll('.card.selected').forEach(e=>e.classList.remove('selected')); return; }
+    pendingConn = { from: connectFirst, to: cardId };
+    document.getElementById('conn-label-input').value = '';
+    openModal('modal-conn-label');
+    document.querySelectorAll('.card.selected').forEach(e=>e.classList.remove('selected'));
+    connectFirst = null;
+  }
+}
+
+function cancelConnection() {
+  pendingConn = null;
+  closeModal('modal-conn-label');
+}
+
+function confirmConnection() {
+  if (!pendingConn) return;
+  const c = getActiveCase();
+  const label = document.getElementById('conn-label-input').value.trim();
+  // avoid duplicates
+  const exists = c.connections.find(cn =>
+    (cn.from === pendingConn.from && cn.to === pendingConn.to) ||
+    (cn.from === pendingConn.to && cn.to === pendingConn.from)
+  );
+  if (!exists) {
+    c.connections.push({ id: uid(), ...pendingConn, label });
+  }
+  pendingConn = null;
+  save();
+  closeModal('modal-conn-label');
+  renderConnections();
+}
+
+// ============================================================
+// ADD CARDS
+// ============================================================
+const PLACEMENTS = [
+  [80,80],[300,80],[500,80],[700,80],
+  [80,300],[300,300],[500,300],[700,300],
+  [150,200],[450,160],[600,280]
+];
+
+function nextPos(c) {
+  const idx = c.cards.length % PLACEMENTS.length;
+  const base = PLACEMENTS[idx];
+  const jx = Math.round((Math.random()-0.5)*40);
+  const jy = Math.round((Math.random()-0.5)*30);
+  return [base[0]+jx, base[1]+jy];
+}
+
+function showAddPerson() { openModal('modal-add-person'); }
+function showAddNote() { openModal('modal-add-note'); }
+function showAddEvidence() { openModal('modal-add-evidence'); }
+
+function addPerson() {
+  const name = document.getElementById('ap-name').value.trim();
+  if (!name) { alert('Name required'); return; }
+  const c = getActiveCase();
+  const [x,y] = nextPos(c);
+  c.cards.push({
+    id: uid(), type: 'person',
+    name, role: document.getElementById('ap-role').value.trim(),
+    status: document.getElementById('ap-status').value,
+    notes: document.getElementById('ap-notes').value.trim(),
+    photo: null, x, y
+  });
+  save();
+  closeModal('modal-add-person');
+  renderBoard();
+}
+
+function addNote() {
+  const title = document.getElementById('an-title').value.trim();
+  if (!title) { alert('Title required'); return; }
+  const c = getActiveCase();
+  const [x,y] = nextPos(c);
+  c.cards.push({
+    id: uid(), type: 'note',
+    title, body: document.getElementById('an-body').value.trim(),
+    pin: document.getElementById('an-pin').value,
+    verified: document.getElementById('an-verified').value,
+    date: new Date().toLocaleDateString('pl-PL'),
+    x, y
+  });
+  save();
+  closeModal('modal-add-note');
+  renderBoard();
+}
+
+function addEvidence() {
+  const title = document.getElementById('ae-title').value.trim();
+  if (!title) { alert('Title required'); return; }
+  const c = getActiveCase();
+  const [x,y] = nextPos(c);
+  c.cards.push({
+    id: uid(), type: 'evidence',
+    title, body: document.getElementById('ae-body').value.trim(),
+    ref: document.getElementById('ae-ref').value.trim(),
+    verified: document.getElementById('ae-verified').value,
+    pin: 'blue',
+    date: new Date().toLocaleDateString('pl-PL'),
+    x, y
+  });
+  save();
+  closeModal('modal-add-evidence');
+  renderBoard();
+}
+
+// ============================================================
+// EDIT / DELETE CARDS
+// ============================================================
+function editCard(id) {
+  const c = getActiveCase();
+  const card = c.cards.find(cd => cd.id === id);
+  if (!card) return;
+  if (card.type === 'person') {
+    document.getElementById('ep-id').value = id;
+    document.getElementById('ep-name').value = card.name;
+    document.getElementById('ep-role').value = card.role || '';
+    document.getElementById('ep-status').value = card.status;
+    document.getElementById('ep-notes').value = card.notes || '';
+    openModal('modal-edit-person');
+  } else {
+    document.getElementById('en-id').value = id;
+    document.getElementById('en-title').value = card.title;
+    document.getElementById('en-body').value = card.body || '';
+    document.getElementById('en-verified').value = card.verified || 'no';
+    const refGroup = document.getElementById('en-ref-group');
+    if (card.type === 'evidence') {
+      refGroup.style.display = 'block';
+      document.getElementById('en-ref').value = card.ref || '';
+      document.getElementById('edit-note-heading').textContent = 'Edit Evidence';
+    } else {
+      refGroup.style.display = 'none';
+      document.getElementById('edit-note-heading').textContent = 'Edit Note';
+    }
+    openModal('modal-edit-note');
+  }
+}
+
+function saveEditPerson() {
+  const id = document.getElementById('ep-id').value;
+  const c = getActiveCase();
+  const card = c.cards.find(cd => cd.id === id);
+  if (!card) return;
+  card.name = document.getElementById('ep-name').value.trim();
+  card.role = document.getElementById('ep-role').value.trim();
+  card.status = document.getElementById('ep-status').value;
+  card.notes = document.getElementById('ep-notes').value.trim();
+  save();
+  closeModal('modal-edit-person');
+  renderBoard();
+}
+
+function saveEditNote() {
+  const id = document.getElementById('en-id').value;
+  const c = getActiveCase();
+  const card = c.cards.find(cd => cd.id === id);
+  if (!card) return;
+  card.title = document.getElementById('en-title').value.trim();
+  card.body = document.getElementById('en-body').value.trim();
+  card.verified = document.getElementById('en-verified').value;
+  if (card.type === 'evidence') card.ref = document.getElementById('en-ref').value.trim();
+  save();
+  closeModal('modal-edit-note');
+  renderBoard();
+}
+
+function deleteCard(id) {
+  showConfirm('Remove this card from the board?', () => {
+    const c = getActiveCase();
+    c.cards = c.cards.filter(cd => cd.id !== id);
+    c.connections = c.connections.filter(cn => cn.from !== id && cn.to !== id);
+    save();
+    renderBoard();
+  });
+}
+
+// ============================================================
+// DRAG
+// ============================================================
+function makeDraggable(el, card) {
+  let startX, startY, origX, origY, dragging = false;
+
+  el.addEventListener('mousedown', e => {
+    if (connectMode) return;
+    if (e.target.closest('button') || e.target.closest('.card-controls') || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+    dragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    origX = card.x;
+    origY = card.y;
+    el.style.zIndex = 50;
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const dx = (e.clientX - startX) / zoom;
+    const dy = (e.clientY - startY) / zoom;
+    card.x = Math.max(0, origX + dx);
+    card.y = Math.max(0, origY + dy);
+    el.style.left = card.x + 'px';
+    el.style.top = card.y + 'px';
+    renderConnections();
+  });
+
+  document.addEventListener('mouseup', e => {
+    if (!dragging) return;
+    dragging = false;
+    el.style.zIndex = '';
+    save();
+  });
+}
+
+// ============================================================
+// ZOOM
+// ============================================================
+function applyZoom() {
+  document.getElementById('corkboard-inner').style.transform = `scale(${zoom})`;
+  document.getElementById('corkboard-inner').style.transformOrigin = 'top left';
+}
+
+function zoomIn() { zoom = Math.min(zoom + 0.1, 2); applyZoom(); renderConnections(); }
+function zoomOut() { zoom = Math.max(zoom - 0.1, 0.4); applyZoom(); renderConnections(); }
+function resetZoom() { zoom = 1; applyZoom(); renderConnections(); }
+
+// ============================================================
+// FILTER
+// ============================================================
+function filterCards(type) {
+  document.querySelectorAll('.card').forEach(el => {
+    if (type === 'all') { el.style.opacity = '1'; return; }
+    const id = el.dataset.id;
+    const c = getActiveCase();
+    if (!c) return;
+    const card = c.cards.find(cd => cd.id === id);
+    el.style.opacity = (card && card.type === type) ? '1' : '0.2';
+  });
+}
+
+// ============================================================
+// CASE META
+// ============================================================
+function openCaseMeta() {
+  const c = getActiveCase();
+  if (!c) return;
+  const panel = document.getElementById('case-meta');
+  document.getElementById('case-meta-content').innerHTML = `
+    <div style="margin-bottom:1rem">
+      <div style="font-size:10px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Case Number</div>
+      <div style="font-family:'Special Elite',cursive;font-size:16px">#${esc(c.number)}</div>
+    </div>
+    <div style="margin-bottom:1rem">
+      <div style="font-size:10px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Title</div>
+      <div style="font-family:'Special Elite',cursive;font-size:14px">${esc(c.title)}</div>
+    </div>
+    <div style="margin-bottom:1rem">
+      <div style="font-size:10px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Status</div>
+      <span class="case-item-status status-${c.status}">${c.status}</span>
+    </div>
+    ${c.officer ? `<div style="margin-bottom:1rem"><div style="font-size:10px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Lead Officer</div><div style="font-size:13px">${esc(c.officer)}</div></div>` : ''}
+    ${c.desc ? `<div style="margin-bottom:1rem"><div style="font-size:10px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Description</div><div style="font-size:12px;line-height:1.6;color:var(--text-muted)">${esc(c.desc)}</div></div>` : ''}
+    <div style="margin-bottom:1rem">
+      <div style="font-size:10px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Cards</div>
+      <div style="font-size:13px">${c.cards.length} on board · ${c.connections.length} connections</div>
+    </div>
+    <div style="margin-bottom:1rem">
+      <div style="font-size:10px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Change Status</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
+        ${['open','active','cold','closed'].map(s=>`<button class="top-btn" onclick="setCaseStatus('${s}')">${s}</button>`).join('')}
+      </div>
+    </div>
+    <div style="margin-top:2rem;padding-top:1rem;border-top:1px solid var(--border-gold)">
+      <button class="top-btn danger" style="width:100%" onclick="deleteCase()">Delete Case</button>
+    </div>
+  `;
+  panel.classList.add('open');
+  panel.style.display = 'block';
+}
+
+function closeCaseMeta() {
+  const panel = document.getElementById('case-meta');
+  panel.classList.remove('open');
+  setTimeout(() => { if (!panel.classList.contains('open')) panel.style.display = 'none'; }, 200);
+}
+
+function setCaseStatus(s) {
+  const c = getActiveCase();
+  c.status = s;
+  save();
+  renderSidebar();
+  openCaseMeta();
+}
+
+function deleteCase() {
+  showConfirm('Delete this entire case? This cannot be undone.', () => {
+    state.cases = state.cases.filter(c => c.id !== state.activeCaseId);
+    state.activeCaseId = null;
+    save();
+    closeCaseMeta();
+    renderSidebar();
+    document.getElementById('case-number-display').textContent = '—';
+    document.getElementById('case-title-display').textContent = 'No case selected';
+    enableButtons(false);
+    renderBoard();
+  });
+}
+
+// ============================================================
+// MODAL HELPERS
+// ============================================================
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+function showConfirm(message, onOk) {
+  document.getElementById('confirm-message').textContent = message;
+  const btn = document.getElementById('confirm-ok-btn');
+  const fresh = btn.cloneNode(true);
+  btn.parentNode.replaceChild(fresh, btn);
+  fresh.addEventListener('click', () => {
+    closeModal('modal-confirm');
+    onOk();
+  });
+  openModal('modal-confirm');
+}
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => {
+    if (e.target === m) closeModal(m.id);
+  });
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (connectMode) toggleConnectMode();
+    document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+    closeCaseMeta();
+  }
+});
+
+// ============================================================
+// UTILS
+// ============================================================
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+}
+
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>');
+}
+
+// Re-render connections on scroll/resize
+document.getElementById('corkboard').addEventListener('scroll', renderConnections);
+window.addEventListener('resize', renderConnections);
+
+</script>
+<script>
+      // Wklej tutaj swój kod Supabase
+      const supabaseUrl = 'https://xoresadfslfazkuuxydb.supabase.co'; 
+      const supabaseKey = 'sb_publishable_KpRCFziobdeJrVXauxTauQ_lWwGVOgF'; 
+
+      const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+      
+      console.log("Supabase zainicjalizowane!");
+    </script>
+</body>
+</html>
