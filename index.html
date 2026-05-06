@@ -1785,6 +1785,35 @@ window.addEventListener('resize', renderConnections);
       const supabaseKey = 'sb_publishable_KpRCFziobdeJrVXauxTauQ_lWwGVOgF'; 
 
       const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+  // --- FUNKCJE MOSTY (Wklej to pod inicjalizacją Supabase) ---
+
+// 1. Zapisuje to, co masz na tablicy do bazy
+async function saveToSupabase(boardData) {
+    const { data, error } = await supabase
+        .from('investigation_state')
+        .upsert({ id: 1, data: boardData, updated_at: new Date() });
+    
+    if (error) console.error("Błąd zapisu:", error);
+    else console.log("Dane zapisane w bazie!");
+}
+
+// 2. Pobiera to, co jest w bazie, i wyświetla na stronie
+async function loadFromSupabase() {
+    const { data, error } = await supabase
+        .from('investigation_state')
+        .select('data')
+        .eq('id', 1)
+        .single();
+    
+    if (data) {
+        console.log("Dane pobrane z bazy, odświeżam tablicę...");
+        // TU MUSISZ WYWOŁAĆ SWOJĄ FUNKCJĘ, KTÓRA RENDERUJE NOTATKI
+        // Np. updateCorkboardUI(data.data); 
+    }
+}
+
+// 3. Automatyczny start: Pobierz dane zaraz po otwarciu strony
+window.addEventListener('load', loadFromSupabase);
       
       console.log("Supabase zainicjalizowane!");
     </script>
