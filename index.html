@@ -1780,42 +1780,37 @@ window.addEventListener('resize', renderConnections);
 
 </script>
 <script>
-      // Wklej tutaj swój kod Supabase
-      const supabaseUrl = 'https://xoresadfslfazkuuxydb.supabase.co'; 
-      const supabaseKey = 'sb_publishable_KpRCFziobdeJrVXauxTauQ_lWwGVOgF'; 
+  // 1. Inicjalizacja (zmieniona nazwa, żeby nie było błędu "already declared")
+  const sbUrl = 'https://xoresadfslfazkuuxydb.supabase.co'; 
+  const sbKey = 'sb_publishable_KpRCFziobdeJrVXauxTauQ_lWwGVOgF'; // Wklej swój pełny klucz!
+  const supabaseClient = supabase.createClient(sbUrl, sbKey);
 
-      const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-  // --- FUNKCJE MOSTY (Wklej to pod inicjalizacją Supabase) ---
+  console.log("Połączenie z Supabase gotowe!");
 
-// 1. Zapisuje to, co masz na tablicy do bazy
-async function saveToSupabase(boardData) {
-    const { data, error } = await supabase
-        .from('investigation_state')
-        .upsert({ id: 1, data: boardData, updated_at: new Date() });
-    
-    if (error) console.error("Błąd zapisu:", error);
-    else console.log("Dane zapisane w bazie!");
-}
-
-// 2. Pobiera to, co jest w bazie, i wyświetla na stronie
-async function loadFromSupabase() {
-    const { data, error } = await supabase
-        .from('investigation_state')
-        .select('data')
-        .eq('id', 1)
-        .single();
-    
-    if (data) {
-        console.log("Dane pobrane z bazy, odświeżam tablicę...");
-        // TU MUSISZ WYWOŁAĆ SWOJĄ FUNKCJĘ, KTÓRA RENDERUJE NOTATKI
-        // Np. updateCorkboardUI(data.data); 
-    }
-}
-
-// 3. Automatyczny start: Pobierz dane zaraz po otwarciu strony
-window.addEventListener('load', loadFromSupabase);
+  // 2. FUNKCJA ZAPISU (To jej brakowało w konsoli!)
+  async function saveToSupabase(boardData) {
+      const { data, error } = await supabaseClient
+          .from('investigation_state')
+          .upsert({ id: 1, data: boardData, updated_at: new Date() });
       
-      console.log("Supabase zainicjalizowane!");
-    </script>
+      if (error) console.error("Błąd zapisu:", error);
+      else console.log("Sukces! Dane są już w bazie danych.");
+  }
+
+  // 3. FUNKCJA ODCZYTU (Wywołaj ją, żeby pobrać dane po odświeżeniu)
+  async function loadFromSupabase() {
+      const { data, error } = await supabaseClient
+          .from('investigation_state')
+          .select('data')
+          .eq('id', 1)
+          .single();
+      
+      if (data) {
+          console.log("Pobrano dane z bazy:", data.data);
+          // Tutaj musisz dodać swoją funkcję, która rysuje tablicę, np.:
+          // renderBoard(data.data);
+      }
+  }
+</script>
 </body>
 </html>
